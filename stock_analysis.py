@@ -4,6 +4,21 @@ import pickle
 
 quandl.ApiConfig.api_key = open("quandl_key.env").read()
 
+
+def help():
+	print(
+		"The stock analysis library includes the following functionality:\n" + 
+		"Watchlist class: a watchlist that stores stocks with their priorities\n"+ 
+		"Watchlist functionality: push, front, remove, pop, view\n"+
+		"get_metrics(ticker, metrics_to_display): display a metric for a given stock\n"+
+		"quick_view(ticker): view various important metrics pertaining to a stock\n"+
+		"daily_view(ticker,num_days,display=[]): view daily changes in multiples or other metrics\n"+
+		"competitor_view(ticker,specced_comps,category,filter_revenue): view analysis on competitors\n"+
+		"quick_valuation(ticker,ann_ebitda_growth,future_ebitda_multiple,num_yrs,share_change,cash_change,debt_change)\n"+
+		"quick_screener_fg(revenue_growth, num_yrs): screen for fast growers at low multiples\n"+
+		"quick_screener_bs(): screen for stocks with a strong balance sheet"
+		)
+
 class Watchlist:
     def __init__(self):
         f = open('watchlist.pickle','rb')
@@ -41,10 +56,10 @@ def quick_view(t):
         #tier 1
         'evebitda', 'pe', 'ps','eps','revenue','roic', 'eps_growth','revenue_growth','fcf_growth',
         #tier 2
-        'net_debt_ps', 'cash_ps', 'pct_change_cash', 'tangible_book_value_ps', 'ptb', 
-        'intangibles_ps', 'pct_change_debt', 'currentratio',
+        'net_debt_ps', 'cash_ps','debt_ps', 'pct_change_cash', 'tangible_book_value_ps', 'ptb', 
+        'pct_change_debt', 'currentratio', 'debt_to_equity', 
         #tier 3
-        'fcf', 'price','pfcf','grossmargin','netmargin','ebitdamargin'
+        'fcf', 'price','pfcf','grossmargin','netmargin','ebitdamargin', 'intangibles_ps'
     ]
     #get ticker, return dataframe of relevant metrics
     
@@ -58,7 +73,8 @@ def quick_view(t):
     intangibles = SF1_df['intangibles']    
     
     #balance sheet metrics
-    
+       
+    SF1_df['debt_ps'] = (totaldebt) / num_shares
     #(cash - total debt) per share
     SF1_df['net_debt_ps'] = (cashneq - totaldebt) / num_shares
     #cash per share
@@ -73,7 +89,8 @@ def quick_view(t):
     SF1_df['intangibles_ps'] = intangibles / num_shares
     #change in debt y/y
     SF1_df['pct_change_debt'] = totaldebt.pct_change()
-    
+    #debt to equity
+    SF1_df['debt_to_equity'] = total_liabilities / (SF1_df['assets'] - total_liabilities)
     #multiples
     SF1_df['pfcf'] = marketcap / SF1_df['fcf']
     
@@ -174,9 +191,7 @@ def quick_screener_fg(revenue_growth=0.15,num_yrs=5):
     screened_stocks = []
     for t in SF1_df['ticker'].unique():
         #high revenue growth
-        
-        print(t)
-        
+                
         SF1_df_t = quandl.get_table('SHARADAR/SF1',ticker=t)[::-1]
         if SF1_df[SF1_df['ticker']==t][::-1]['revenue_growth'][:num_yrs].mean() > revenue_growth:
             
